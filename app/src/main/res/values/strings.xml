@@ -1,0 +1,14 @@
+<resources>
+
+    <string name="app_name">PCSC remote TEST</string>
+    <string name="action_settings">Settings</string>
+    <string name="runText">Run</string>
+    <string name="SpringCard">SpringCard</string>
+    <string name="ATR">ATR :</string>
+    <string name="SpringCardPCSCsrv_name">SpringCard PCSC service</string>
+    <string name="SpringCardPCSCsrv_started">SpringCard PCSC service started</string>
+    <string name="SpringCardPCSCsrv_connected">Connected to SpringCard PCSC service !</string>
+    <string name="SpringCardPCSCsrv_reload_error">Unable to reload SpringCard PCSC !</string>
+    <string name="SpringCardPCSCsrv_disconnected">Disconnected from SpringCard PCSC service !</string>
+
+</resources>
