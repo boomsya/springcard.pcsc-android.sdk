@@ -1,4 +1,4 @@
-package com.springcard.springcardpcsctest1;
+package com.springcard.springcardpcscdemo;
 
 import android.app.Activity;
 import android.content.ComponentName;
@@ -16,11 +16,14 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class MainActivity extends Activity {
 
     /* watermark for logging */
     private static final String     TAG                         = "Client MainActivity";
+
+    /* COSMETIC */
 
     /* widget references */
     private TextView                productName_textView;
@@ -31,26 +34,20 @@ public class MainActivity extends Activity {
     private View                    RunButton_View;
 
     /* Status items */
-    private String                  product_string              = "No product ";
-    private String                  card_string                 = "No card ";
+    private String                  product_string              = "No reader";
+    private String                  card_string                 = "Card absent";
     private String                  atr_string                  = "ATR : ";
 
-    /* command list */
-    private final int               CMD_READER_STATE            = 1;
-    private final int               CMD_CARD_STATE              = 2;
-    private final int               CMD_SEND_APDU               = 3;
-    private final int               CMD_RECV_RAPDU              = 4;
 
-    /* error list */
-    private final int               ERROR_NO_ERROR              = 10;
-    private final int               ERROR_NO_READER             = 11;
-    private final int               ERROR_WRONG_APDU_LENGTH     = 12;
-    private final int               ERROR_INVALID_APDU          = 13;
-    private final int               ERROR_CARD_COMMUNICATION    = 14;
+    /* COMMUNICATION PART */
 
-    /* communication part */
+    /* output messenger used to talk with the running service */
     final Messenger                 localMessenger              = new Messenger(new IncomingHandler());
+
+    /* input messenger used to catch answer from the running service */
     Messenger                       saupService                 = null;
+
+    /* service connection flag */
     boolean                         isSaupBound                 = false;
 
 
@@ -71,14 +68,8 @@ public class MainActivity extends Activity {
         goText = (TextView) findViewById(R.id.operationText);
         RunButton_View = (View) findViewById(R.id.runButton);
 
-        /* Connect to SpringCard Android USB PCSC service */
-        /* this must be done before sending command to the reader */
-        if (!isSaupBound) {
-            /* bind to SpringCard Android USB PCSC service */
-            saupBind();
-        }
-
-        Log.d(TAG, "onCreate");
+        /* setup saup */
+        saupSetup();
     }
 
 
@@ -91,11 +82,26 @@ public class MainActivity extends Activity {
 
         /* We must clean connexion with SpringCard Android USB PCSC service */
         if (isSaupBound) {
+
+            /******************************/
+            /* free this reader           */
+            Message msg = Message.obtain();
+
+            Bundle bundle = new Bundle();
+            bundle.putInt("command", SpringCardPCSCCli.CMD_READER_FREE);
+
+            msg.setData(bundle);
+            msg.replyTo = localMessenger;
+            try {
+                saupService.send(msg);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+
             // Detach our existing connection.
             unbindService(saupConnection);
             isSaupBound = false;
         }
-        Log.d(TAG, "onDestroy");
     }
 
 
@@ -106,24 +112,29 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
 
-        /* Connect to SpringCard Android USB PCSC service */
-        /* this must be done before sending command to the reader */
-        if (!isSaupBound) {
-            /* bind to SpringCard Android USB PCSC service */
-            saupBind();
-        }
-        Log.d(TAG, "onResume");
+        /* setup saup */
+        saupSetup();
     }
 
 
     /**
-     * Connect to SpringCard Android USB PCSC service (request access)
+     * Check if service package is present or not and connect to if available
      */
-    public void saupBind() {
-         /* connect to service */
-        Intent intent = new Intent("com.springcard.android_usb_pcsc.service");
-        intent.setPackage("com.springcard.android_usb_pcsc.service");
-        bindService(intent, saupConnection, Context.BIND_AUTO_CREATE);
+    public void saupSetup() {
+
+        /* check if service is available */
+        if (!SpringCardPCSCCli.isPackageInstalled(this)) {
+            Toast.makeText(getApplicationContext(), "com.springcard.android_usb_pcsc.service is not present on this system, please install it :)", Toast.LENGTH_LONG).show();
+        } else if (!isSaupBound) {
+            /* Connect to SpringCard Android USB PCSC service */
+            /* this must be done before sending command to the reader */
+            Toast.makeText(getApplicationContext(), "com.springcard.android_usb_pcsc.service found, connecting ...", Toast.LENGTH_LONG).show();
+
+            /* bind to SpringCard Android USB PCSC service */
+            Intent intent = new Intent("com.springcard.android_usb_pcsc.service");
+            intent.setPackage("com.springcard.android_usb_pcsc.service");
+            bindService(intent, saupConnection, Context.BIND_AUTO_CREATE);
+        }
     }
 
 
@@ -142,7 +153,7 @@ public class MainActivity extends Activity {
             Message msg = Message.obtain();
 
             Bundle bundle = new Bundle();
-            bundle.putInt("command", CMD_READER_STATE);
+            bundle.putInt("command", SpringCardPCSCCli.CMD_READER_STATE);
 
             msg.setData(bundle);
             msg.replyTo = localMessenger;
@@ -156,7 +167,7 @@ public class MainActivity extends Activity {
             /* ask for card status */
             msg = Message.obtain();
             bundle = new Bundle();
-            bundle.putInt("command", CMD_CARD_STATE);
+            bundle.putInt("command", SpringCardPCSCCli.CMD_CARD_STATE);
 
             /* using slot 0 (others slots not used currently) */
             bundle.putInt("slot", 0);
@@ -191,23 +202,27 @@ public class MainActivity extends Activity {
             /* check for error code */
             switch(data.getInt("error")) {
 
-                case ERROR_NO_READER : {
+                case SpringCardPCSCCli.ERROR_NO_READER : {
+                    Toast.makeText(getApplicationContext(), "Error : no reader", Toast.LENGTH_LONG).show();
                     Log.e(TAG, "ERROR_NO_READER");
                 } break;
 
-                case ERROR_WRONG_APDU_LENGTH : {
+                case SpringCardPCSCCli.ERROR_WRONG_APDU_LENGTH : {
+                    Toast.makeText(getApplicationContext(), "Error : wrong APDU length", Toast.LENGTH_LONG).show();
                     Log.e(TAG, "ERROR_WRONG_APDU_LENGTH");
                 } break;
 
-                case ERROR_INVALID_APDU : {
+                case SpringCardPCSCCli.ERROR_INVALID_APDU : {
+                    Toast.makeText(getApplicationContext(), "Error : invalid APDU", Toast.LENGTH_LONG).show();
                     Log.e(TAG, "ERROR_INVALID_APDU");
                 } break;
 
-                case ERROR_CARD_COMMUNICATION : {
+                case SpringCardPCSCCli.ERROR_CARD_COMMUNICATION : {
+                    Toast.makeText(getApplicationContext(), "Error : card communication error", Toast.LENGTH_LONG).show();
                     Log.e(TAG, "ERROR_CARD_COMMUNICATION");
                 } break;
 
-                case ERROR_NO_ERROR :
+                case SpringCardPCSCCli.ERROR_NO_ERROR :
                 default :{
                     Log.d(TAG, "ERROR_NO_ERROR");
                 }
@@ -217,23 +232,23 @@ public class MainActivity extends Activity {
             switch(data.getInt("command")) {
 
                 /* ask for a reader */
-                case CMD_READER_STATE: {
+                case SpringCardPCSCCli.CMD_READER_STATE: {
 
                     product_string = data.getString("reader");
+                    if(data.getInt("error") == SpringCardPCSCCli.ERROR_NO_READER) {
+                        atr_string =  "ATR : ";
+                        card_string = "Card absent";
+                    }
                     /* update display */
                     new updateDisplayTask().execute(product_string, card_string, atr_string);
 
                 } break;
 
                 /* card changed on reader */
-                case CMD_CARD_STATE: {
+                case SpringCardPCSCCli.CMD_CARD_STATE: {
                     atr_string = data.getString("atr");
-                    if(!atr_string.equals("")) {
-                        card_string = "Card present";
-                    } else {
-                        card_string = "No card";
-                        atr_string = "ATR : ";
-                    }
+                    product_string = data.getString("reader");
+                    card_string = data.getString("card");
 
                     /* update display */
                     new updateDisplayTask().execute(product_string, card_string, atr_string);
@@ -241,7 +256,7 @@ public class MainActivity extends Activity {
                 } break;
 
                  /* RAPDU received */
-                case CMD_RECV_RAPDU: {
+                case SpringCardPCSCCli.CMD_RECV_RAPDU: {
                     String rapdu = data.getString("rapdu");
                     if(rapdu != null) {
                         /* update display */
@@ -262,46 +277,17 @@ public class MainActivity extends Activity {
      * @param view current view used
      */
     public void connectButtonOnClick(View view) {
+        /* check if we are connected */
         if (!isSaupBound) {
-
-            /* bind to SpringCard Android USB PCSC service */
-            saupBind();
+            Toast.makeText(getApplicationContext(), "You must be connected", Toast.LENGTH_LONG).show();
+            saupSetup();
             return;
         }
 
         Message msg = Message.obtain();
 
         Bundle bundle = new Bundle();
-        bundle.putInt("command", CMD_READER_STATE);
-
-        msg.setData(bundle);
-        msg.replyTo = localMessenger;
-        try {
-            saupService.send(msg);
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
-    }
-
-
-    /**
-     * Request card state
-     */
-    public void getCardInfoButtonOnClick(View view) {
-        if (!isSaupBound) {
-
-            /* bind to SpringCard Android USB PCSC service */
-            saupBind();
-            return;
-        }
-
-        Message msg = Message.obtain();
-
-        Bundle bundle = new Bundle();
-        bundle.putInt("command", CMD_CARD_STATE);
-
-        /* using slot 0 (others slots not used currently) */
-        bundle.putInt("slot", 0);
+        bundle.putInt("command", SpringCardPCSCCli.CMD_READER_STATE);
 
         msg.setData(bundle);
         msg.replyTo = localMessenger;
@@ -336,7 +322,7 @@ public class MainActivity extends Activity {
             Bundle bundle = new Bundle();
 
             /* specify message type */
-            bundle.putInt("command", CMD_SEND_APDU);
+            bundle.putInt("command", SpringCardPCSCCli.CMD_SEND_APDU);
 
             /* apdu contains an apdu to execute on the card */
             bundle.putString("apdu",separated[i]);
@@ -381,7 +367,7 @@ public class MainActivity extends Activity {
                     productName_textView.setText(str[0]);
                     productState_textView.setText(str[1]);
                     ATR_textView.setText(str[2]);
-                    if (str[1].equals("Card present")) {
+                    if (str[1]!=null && str[1].equals("Card present")) {
                         RunButton_View.setEnabled(true);
                     } else {
                         RunButton_View.setEnabled(false);
