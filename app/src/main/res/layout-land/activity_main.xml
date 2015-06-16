@@ -66,6 +66,7 @@ android:focusableInTouchMode="true" >
 
     </LinearLayout>
 
+
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -75,18 +76,8 @@ android:focusableInTouchMode="true" >
         android:layout_gravity="center_horizontal"
         android:onClick="runButtonClick"
         android:textColor="#ff000000"
-        android:layout_below="@+id/connectButton"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="112dp" />
-
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/connectText"
-        android:id="@+id/connectButton"
-        android:onClick="connectButtonOnClick"
         android:layout_below="@+id/linearLayout2"
-        android:layout_alignStart="@+id/runButton" />
+        android:layout_centerHorizontal="true" />
 
 
     <EditText
@@ -102,7 +93,7 @@ android:focusableInTouchMode="true" >
         android:gravity="top"
         android:layout_alignParentBottom="true"
         android:layout_alignParentEnd="true"
-        android:layout_toEndOf="@id/connectButton"
+        android:layout_toEndOf="@+id/runButton"
         android:layout_alignParentRight="true"
         android:layout_alignWithParentIfMissing="false"
         android:layout_below="@+id/linearLayout2"
@@ -122,11 +113,9 @@ android:focusableInTouchMode="true" >
         android:text="FF B0 00 00 40\nFF CA 00 00 00"
         android:onClick="connectButtonOnClick"
         android:layout_alignParentBottom="true"
-        android:layout_alignParentStart="false"
-        android:layout_toStartOf="@id/connectButton"
-        android:layout_alignParentLeft="true"
-        android:layout_alignLeft="@+id/linearLayout2"
         android:layout_below="@+id/linearLayout2"
-        android:layout_marginRight="10px" />
+        android:layout_marginRight="10px"
+        android:layout_alignParentStart="true"
+        android:layout_toStartOf="@+id/runButton" />
 
 </RelativeLayout>

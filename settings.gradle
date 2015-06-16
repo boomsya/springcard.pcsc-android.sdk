@@ -1,1 +1,1 @@
-include ':app'
+include ':app', ':springcard_android_usb_pcsc_client'

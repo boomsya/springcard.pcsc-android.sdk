@@ -76,15 +76,6 @@ android:focusableInTouchMode="true" >
         android:layout_below="@+id/operationText"
         android:layout_marginTop="@dimen/activity_vertical_margin" />
 
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/connectText"
-        android:id="@+id/connectButton"
-        android:layout_alignBottom="@+id/runButton"
-        android:layout_alignParentStart="true"
-        android:onClick="connectButtonOnClick" />
-
 
     <EditText
         android:layout_width="match_parent"
